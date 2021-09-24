@@ -37,6 +37,11 @@ def wrangle(dataset):
   
   return df
 
+
+### **Import Data Set** ###
+
+df = wrangle('sample_df')
+
 ### **Establish Baseline** ###
 
 baseline_acc = df['claim'].value_counts(normalize=True)[0]
@@ -52,26 +57,26 @@ X_train, X_val, y_train, y_val = train_test_split(X,y,test_size = .2, random_sta
 
 ### **Models without Pipeline** ###
 
-**Linear Regression Model** 
+#**Linear Regression Model** 
 lr_model = LinearRegression()
 lr_model.fit(X_train, y_train)
 
-**Decision Tree Model**
-dt_model = DecisionTree()
+#**Decision Tree Model**
+dt_model = DecisionTreeClassifier()
 dt_model.fit(X_train, y_train)
 
-**Ridge Regression Model**
+#**Ridge Regression Model**
 model_ridge = Ridge()
 model_ridge.fit(X_train, y_train)
 
-**Random Forest Models**
+#**Random Forest Models**
 model_forest_c = RandomForestClassifier(random_state=42)
 model_forest_c.fit(X_train, y_train)
 
 model_forest_r = RandomForestRegressor()
 model_forest_r.fit(X_train, y_train)
 
-**Boosted Model**
+#**Boosted Model**
 model_boost = GradientBoostingClassifier(random_state=42)
 model_boost.fit(X_train,y_train)
 
@@ -90,7 +95,7 @@ check_metrics(models)
 
 ### Hyper-Parameter Tuning ###
 
-**Variables to Play with**
+#**Variables to Play with**
 
 rf_param_grid = {
     'max_depth':[3,4,5,6],
@@ -112,25 +117,41 @@ rfr_model.fit(X_val, y_val)
 gbc_model = RandomizedSearchCV(model_boost, gbc_param_grid, n_iter=25, n_jobs=-1)
 gbc_model.fit(X_val, y_val)
 
-Def tuning_metrics(models):
-  For model in fin_models:
+def tuning_metrics(models):
+  for model in fin_models:
     print('best_params:', model.best_params_)
     print('best_score:', model.best_score_)
  
- fin_models = [rfr_model, rfc_model, gbc_model]
+fin_models = [rfr_model, rfc_model, gbc_model]
  
- tuning_metrics(fin_models)
+tuning_metrics(fin_models)
 
 ### **Create test submission** ###
 
-**Wrangle Test Set**
+def wrangle(dataset):
+  df = (pd.read_csv(dataset)).set_index('id')
 
-X_test = wrangle(test.csv)
+  #create null values column
+  df['null_values'] = df.T.isnull().sum()
+    
+    #Scale data
+  df = (df-df.min())/(df.max() - df.min())
+  
+  #impute missing values with mean
+  m_imp = SimpleImputer(missing_values=np.nan, strategy='mean')
+  m_imp = m_imp.fit_transform(df)
+  df = pd.DataFrame(m_imp, index=df.index, columns=df.columns)
+  
+  return df
 
-**Process and Convert Submission to data frame**
+#**Wrangle Test Set**
+
+X_test = wrangle('test.csv')
+
+#**Process and Convert Submission to data frame**
 
 submission = pd.DataFrame(data=model_boost.predict_proba(X_test), index=X_test.index)
 
-**Submission to csv**
+#**Submission to csv**
 
 submission = submission.to_csv('submission.csv')
