@@ -120,5 +120,17 @@ Def tuning_metrics(models):
  fin_models = [rfr_model, rfc_model, gbc_model]
  
  tuning_metrics(fin_models)
- 
- 
+
+### **Create test submission** ###
+
+**Wrangle Test Set**
+
+X_test = wrangle(test.csv)
+
+**Process and Convert Submission to data frame**
+
+submission = pd.DataFrame(data=model_boost.predict_proba(X_test), index=X_test.index)
+
+**Submission to csv**
+
+submission = submission.to_csv('submission.csv')
