@@ -1,4 +1,4 @@
-### Import Libraries ###
+### **Import Libraries** ###
 
 import numpy as np
 import pandas as pd
@@ -12,10 +12,113 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.linear_model import Ridge 
 from sklearn.compose import ColumnTransformer
 from sklearn.inspection import permutation_importance
-from sklearn.model_selection import RandomizedSearchCV
+from sklearn.model_selection import RandomizedSearchCV, train_test_split
 import matplotlib.pyplot as plt
 !pip install pdpbox
 from pdpbox.pdp import pdp_isolate, pdp_plot, pdp_interact, pdp_interact_plot
 !pip install shap
 
-###
+### **Wrangle Data** ###
+
+def wrangle(dataset):
+  df = (pd.read_csv(dataset)).set_index('id')
+  #for sample alone
+  df = df.drop(columns='Unnamed: 0')
+  #create null values column
+  df['null_values'] = df.T.isnull().sum()
+  #scale everything except claim column
+  dfd = df.drop(columns='claim')
+  dfd = (dfd-dfd.min())/(dfd.max() - dfd.min())
+  df = pd.concat((dfd, df.claim),1)
+  #impute missing values with mean
+  m_imp = SimpleImputer(missing_values=np.nan, strategy='mean')
+  m_imp = m_imp.fit_transform(df)
+  df = pd.DataFrame(m_imp, index=df.index, columns=df.columns)
+  
+  return df
+
+### **Establish Baseline** ###
+
+baseline_acc = df['claim'].value_counts(normalize=True)[0]
+
+### **Split Data** ###
+
+X = df.drop(columns = 'claim')
+y = df['claim']
+
+### **Train Test Split** ###
+
+X_train, X_val, y_train, y_val = train_test_split(X,y,test_size = .2, random_state = 42)
+
+### **Models without Pipeline** ###
+
+**Linear Regression Model** 
+lr_model = LinearRegression()
+lr_model.fit(X_train, y_train)
+
+**Decision Tree Model**
+dt_model = DecisionTree()
+dt_model.fit(X_train, y_train)
+
+**Ridge Regression Model**
+model_ridge = Ridge()
+model_ridge.fit(X_train, y_train)
+
+**Random Forest Models**
+model_forest_c = RandomForestClassifier(random_state=42)
+model_forest_c.fit(X_train, y_train)
+
+model_forest_r = RandomForestRegressor()
+model_forest_r.fit(X_train, y_train)
+
+**Boosted Model**
+model_boost = GradientBoostingClassifier(random_state=42)
+model_boost.fit(X_train,y_train)
+
+### Check Evaluation Metrics ###
+
+def check_metrics(models):
+  for model in models:
+    print('Training MAE', mean_absolute_error(y_train, model.predict(X_train)))
+    print('Validation MAE', mean_absolute_error(y_val, model.predict(X_val)))
+    print('Validation R^2 or acc', model.score(X_val, y_val))
+    print('+-------------------------------+')
+
+models = [model_ridge, model_forest_c, model_forest_r, model_boost, lr_model, dt_model]
+
+check_metrics(models)
+
+### Hyper-Parameter Tuning ###
+
+**Variables to Play with**
+
+rf_param_grid = {
+    'max_depth':[3,4,5,6],
+    'n_estimators': [100,200,300,400,500]
+}
+gbc_param_grid = {
+    'max_depth': [3,4,5,6]
+}
+rfr_param_grid = {
+    'max_depth':[3,4,5,6]
+}
+
+rfc_model = RandomizedSearchCV(model_forest_c, rf_param_grid, n_iter=25, n_jobs=-1)
+rfc_model.fit(X_val, y_val)
+
+rfr_model = RandomizedSearchCV(model_forest_r, rfr_param_grid, n_iter=25, n_jobs=-1)
+rfr_model.fit(X_val, y_val)
+
+gbc_model = RandomizedSearchCV(model_boost, gbc_param_grid, n_iter=25, n_jobs=-1)
+gbc_model.fit(X_val, y_val)
+
+Def tuning_metrics(models):
+  For model in fin_models:
+    print('best_params:', model.best_params_)
+    print('best_score:', model.best_score_)
+ 
+ fin_models = [rfr_model, rfc_model, gbc_model]
+ 
+ tuning_metrics(fin_models)
+ 
+ 
